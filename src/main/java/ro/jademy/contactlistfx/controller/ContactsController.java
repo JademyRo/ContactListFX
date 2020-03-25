@@ -1,5 +1,6 @@
 package ro.jademy.contactlistfx.controller;
 
+import com.github.javafaker.Faker;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
@@ -9,19 +10,16 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
-import ro.jademy.contactlistfx.io.ContactReader;
+import ro.jademy.contactlistfx.model.Address;
 import ro.jademy.contactlistfx.model.Contact;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class ContactsController {
+public class ContactsController extends BaseController {
 
-    private ContactReader contactReader;
-
-    private Map<String, Contact> contacts = new HashMap<>();
+    private Map<String, Contact> contacts;
 
     @FXML
     private ListView<String> contactsListView;
@@ -36,7 +34,6 @@ public class ContactsController {
 
     @FXML
     private Button backButton;
-
     @FXML
     private Button editButton;
 
@@ -45,17 +42,30 @@ public class ContactsController {
     @FXML
     private Label lastName;
     @FXML
-    private Label phoneNumber;
+    private Label phoneNumbers;
+    @FXML
+    private Label address;
 
     public ContactsController() {
-        this(new ContactReader());
+        this.contacts = initContacts();
     }
 
-    private ContactsController(ContactReader contactReader) {
-        this.contactReader = contactReader;
+    private Map<String, Contact> initContacts() {
+        Faker faker = new Faker();
+        Map<String, Contact> contacts = new HashMap<>();
+        for (int i = 0; i < 50; i++) {
+            Contact contact = new Contact(faker.name().firstName(), faker.name().lastName(), faker.phoneNumber().phoneNumber());
 
-        List<Contact> contactList = contactReader.getContacts();
-        contactList.forEach(c -> contacts.put(c.getFullName(), c));
+            Address address = new Address();
+            address.setCity(faker.address().cityName());
+            address.setStreetName(faker.address().streetName());
+            address.setNumber(faker.address().streetAddressNumber());
+            contact.setAddress(address);
+
+            contacts.put(contact.getFullName(), contact);
+        }
+
+        return contacts;
     }
 
     @FXML
@@ -75,7 +85,8 @@ public class ContactsController {
 
                     firstName.setText(selectedContact.getFirstName());
                     lastName.setText(selectedContact.getLastName());
-                    phoneNumber.setText(selectedContact.getPhoneNumber());
+                    phoneNumbers.setText(String.join(", ", selectedContact.getPhoneNumbers().values()));
+                    address.setText(selectedContact.getAddress().toString());
                 }
             }
         });
@@ -91,22 +102,9 @@ public class ContactsController {
         editButton.setOnAction(event -> handleEdit());
     }
 
-
     private void handleEdit() {
-
-        String selectedName = contactsListView.getSelectionModel().getSelectedItem();
-        Contact selectedContact = contacts.get(selectedName);
-
-        TextInputDialog dialog = new TextInputDialog(selectedContact.getPhoneNumber());
-        dialog.setTitle("Edit Phone Number");
-        dialog.setHeaderText(null);
-        dialog.setContentText("Phone Number:");
-
-        Optional<String> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            selectedContact.setPhoneNumber(result.get());
-            phoneNumber.setText(result.get());
-        }
+        // TODO: implement edit contact
+        System.out.println("Not yet implemented!");
     }
 
     private void handleAdd() {
@@ -131,6 +129,12 @@ public class ContactsController {
         lastName.setPromptText("Last Name");
         TextField phoneNumber = new TextField();
         phoneNumber.setPromptText("Phone Number");
+        TextField city = new TextField();
+        city.setPromptText("City");
+        TextField street = new TextField();
+        street.setPromptText("Street");
+        TextField streetNumber = new TextField();
+        streetNumber.setPromptText("Street Number");
 
         grid.add(new Label("First Name:"), 0, 0);
         grid.add(firstName, 1, 0);
@@ -138,6 +142,12 @@ public class ContactsController {
         grid.add(lastName, 1, 1);
         grid.add(new Label("Phone Number:"), 0, 2);
         grid.add(phoneNumber, 1, 2);
+        grid.add(new Label("City:"), 0, 3);
+        grid.add(city, 1, 3);
+        grid.add(new Label("Street:"), 0, 4);
+        grid.add(street, 1, 4);
+        grid.add(new Label("Street Number:"), 0, 5);
+        grid.add(streetNumber, 1, 5);
 
         // Disable the OK button by default
         Node okButtonNode = dialog.getDialogPane().lookupButton(okButton);
@@ -156,7 +166,7 @@ public class ContactsController {
         // Convert the result to a Contact object when the OK button is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == okButton) {
-                return new Contact(firstName.getText(), lastName.getText(), phoneNumber.getText());
+                return new Contact(firstName.getText(), lastName.getText(), phoneNumber.getText(), new Address(city.getText(), street.getText(), streetNumber.getText()));
             }
             return null;
         });
